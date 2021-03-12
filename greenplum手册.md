@@ -1,272 +1,96 @@
-# 整体介绍  
-GreenPlum是一个关系型数据库集群.，它实际上是由多个独立的数据库服务组合成的逻辑数据库。GreenPlum是基于PostgreSQL(开源数据库)的分布式数据库，它采用的是shared nothing架构(MPP  Massively Parallel Processing，即大规模并行处理)，主机、操作系统、内存、存储都是节点自己控制，不存在着共享。它主要由master host，segment host，interconnect三大部分构成。   
-Master节点：客户端访问连接的认证，处理传入的SQL语句，在segment之间分配工作负荷，协调每个segment返回的结果,并把最终结果返回给客户端。  
-Segment节点主要做数据存储和数据处理,用户创建的索引和表被分发到各个子节点当中,每一个子节点都包含了用户数据的分片,而这些分片不存在重复的情况。  
-Interconnect是GreenPlum数据库的网络层.在每个segment中起到一个ipc的作用(inter-process communication)。  
 
-# 常用命令  
-* GP服务启停
-su - gpadmin  
-gpstart #正常启动  
-gpstop #正常关闭  
-gpstop -M fast #快速关闭  
-gpstop –r #重启  
-gpstop –u #重新加载配置文件  
+1. 数据库启动：gpstart  
+常用可选参数： -a : 直接启动，不提示终端用户输入确认  
+              -m:只启动master 实例，主要在故障处理时使用  
 
-* 表  
-系统表：PG_TABLES：pg表信息表    pg_class：pg类信息表       pg_attribute：pg属性表    pg_type：pg类型表  
-$psql -h 192.168.1.100 -p admin -d testDB -U gpadmin               #其他机器上使用psql连接到数据库  
-$createdb testDB -E utf-8　　　　　　　　  #创建测试数据库  
-$truncate test1_tb;                                           #*物理删除表文件*  
-$export PGDATABASE=testDB                      #设置默认testDB数据库  
-$select version();                                             #查询数据库版本  
-$create table test_tb(id int primary key,name varchar(64));             #创建表  
-$create table test_tb(id int primary key,name varchar(64)) distributed by(id,name);  
-$create table test_tb(id int,name varchar(64)) distributed randomly;  
-$create table test2_tb (like test1_tb);                      #复制表结构  
-#create table as 可以加入distributed指定分布键，select into只能使用默认的分布键  
-$create table test2_tb as select * from test1_tb distributed by(id);  
-$select * into test3_tb from test1_tb;  
-$select "name" as 姓名 from test_tb; 　　　　　　　　　　　#greenplum数据库设置别名，不能使用单引号，单引号是修身变量  
-$select "name" as "姓名" from test_tb; 　　　　　　　　　　#greenplum数据库用双引号设置别名  
-$insert into test1_tb values(1,'zhangsan'),(2,'lisi'),(3,'wangwu');      #批量插入数据，分布键不要为空  
-#update：不能批量对分布键执行update，因为对分布键执行update需要将数据重分布，而gp暂时不支持这个功能  
-$update test1_tb set name='lier' where id=1;　　　　#更新数据  
-$delete from test1_tb where name in(select name from test_tb);            #删除数据  
-$select * from pg_tables;                                                   #获取表结构  
-$select datname,pg_size_pretty(pg_database_size(datname)) from pg_database;            #获取所有数据库名  
-$select pg_size_pretty(pg_total_relation_size('tb_name'));                        #查看表索引  
-$SELECT A .attname AS field,      T .typname AS TYPE FROM pg_class C,         pg_attribute A,  pg_type T  WHERE      C .relname = 'tb_name' AND A .attnum > 0 AND A .attrelid = C .oid AND A .atttypid = T .oid ORDER BY   A .attnum;                                     #查看表结构  
+2.  数据库停止：gpstop：  
 
-* 索引(index)  
-\h create index                                    #查看创建索引的帮助  
-\d tb_test                                             #查看tb_test表信息  
-create index idx_01 on tb_test(id);    #为tb_test表中(id)字段创建索引  
-\d tb_test                                            #查看tb_test表信息  
-\d+ tb_test;                                         #查看tb_test表以及其子表信息  
-create index bmidx_01 on tb_test using bitmap(count);     #创建位图索引  
-explain select * from tb_test where count = 0;                     #查看tb_test表的执行计划  
-show enable_seqscan;                       #GP中默认进行序列扫描  
-set enable_seqscan=off;                    #将序列扫描的方式关闭  
-\h reindex                      #查看reindex的帮助  
-\h drop index                           #查看drop index的帮助  
-drop index idx_01;                    #删除索引idx_01  
-* 视图(view)  
-格式：普通视图V_【具体业务含义名称】,物化视图MV_【具体业务含义名称】  
-  
-CREATE [ OR REPLACE ] [ TEMP | TEMPORARY ] VIEW name [ ( column_name [, ...] ) ]  
-\h create view                                      #查看创建视图的帮助  
-\d tb_test                                             #查看tb_test表结构信息  
-create view vv_01 as select * from tb_test where gender = 'M';  #创建视图  
-\dv                                                        #使用“\dv”命令查看当前视图  
-\h drop view                                       #查看删除视图的帮助  
-drop view vv_01;                                 #删除视图vv_01  
+常用可选参数：-a：直接停止，不提示终端用户输入确认  
+            -m：只停止master 实例，与gpstart –m 对应使用  
+            -M fast：停止数据库，中断所有数据库连接，回滚正在运行的事务  
+            -u：不停止数据库，只加载pg_hba.conf 和postgresql.conf中运行时参数，当改动参数配置时候使用。  
+            评：-a用在shell里，最多用的还是-M fast。
 
-* 序列(sequence)  
-查询哪些视图引用了某张数据表  
-CREATE OR REPLACE FUNCTION public.get_views_used_by_table(text)  
-    RETURNS setof record  as  
-$FBODY$  
-select distinct vn.nspname || '.'||vc.relname as viewname   
-from pg_class c join pg_namespace n on n.oid=c.relnamespace  left join pg_depend d on d.refobjid =c.oid  
-left join pg_rewrite r on r.oid =d.objid  
-left join pg_class vc on r.ev_class =vc.oid  
-left join pg_namespace vn on vc.relnamespace=vn.oid  
-where  d.deptype='n' and  
-d.classid =2618 and  
-r.rulename ='_RETURN' and  
-vc.relkind='v' and  
-c.oid =$1::regclass ;  
-$FBODY$  
-LANGUAGE sql volatile;  
-
-select public.get_views_used_by_table('public.test1');  
-select * from public.get_views_used_by_table('public.test1') as A (viewname text);  
-\h CREATE SEQUENCE                                  #查看创建序列的帮助  
-create sequence test_seq start with 100;   　#创建名为test_seq的序列  
-\ds                                                                通过\ds命令查看当前数据库中存在的序列  
-select setval('test_seq',200);                         #通过设置test_seq的序列值为200  
-select nextval('test_seq');                              #查看当前序列的下一个值  
-select * from test_seq;                                  #查看当前序列的信息  
-\h alter sequence;                                        #查看修改序列的帮助  
-alter sequence test_seq start with 205;      #修改当前序列的开始值为205  
-\h drop sequence;                                        #查看修改序列的帮助  
-drop sequence test_seq;                             #删除当前序列  
-show enable_seqscan;                                 #GP中默认进行序列扫描  
-set enable_seqscan=off;                             #将序列扫描的方式关闭  
-
-1.       数据库启动：gpstart
-
-常用可选参数： -a : 直接启动，不提示终端用户输入确认
-
-                            -m:只启动master 实例，主要在故障处理时使用
-
-2.       数据库停止：gpstop：
-
-常用可选参数：-a：直接停止，不提示终端用户输入确认
-
-                                   -m：只停止master 实例，与gpstart –m 对应使用
-
-                                -M fast：停止数据库，中断所有数据库连接，回滚正在运
-
-                            行的事务
-
--u：不停止数据库，只加载pg_hba.conf 和postgresql.conf中运行时参数，当改动参数配置时候使用。
-
-评：-a用在shell里，最多用的还是-M fast。
-
- 
-
-3.       查看实例配置和状态
-
+3. 查看实例配置和状态
             select * from gp_configuration order by 1 ;
-
 主要字段说明：
+           Content：该字段相等的两个实例，是一对Ｐ（primary instance）和Ｍ（mirror  Instance)
+           Isprimary：实例是否作为primary instance 运行
+           Valid：实例是否有效，如处于false 状态，则说明该实例已经down 掉。
+           Port：实例运行的端口
+           Datadir:实例对应的数据目录
 
-Content：该字段相等的两个实例，是一对Ｐ（primary instance）和Ｍ（mirror
+4. gpstate ：显示Greenplum数据库运行状态，详细配置等信息  
 
-          Instance)
-
-     Isprimary：实例是否作为primary instance 运行
-
-             Valid：实例是否有效，如处于false 状态，则说明该实例已经down 掉。
-
-             Port：实例运行的端口
-
-     Datadir:实例对应的数据目录
-
-4.       gpstate ：显示Greenplum数据库运行状态，详细配置等信息
-
-常用可选参数：-c：primary instance 和 mirror instance 的对应关系
-
-                               -m：只列出mirror 实例的状态和配置信息
-
-                -f：显示standby master 的详细信息
-
-              -Q：显示状态综合信息
+常用可选参数：-c：primary instance 和 mirror instance 的对应关系  
+             -m：只列出mirror 实例的状态和配置信息  
+             -f：显示standby master 的详细信息  
+             -Q：显示状态综合信息  
 
 该命令默认列出数据库运行状态汇总信息，常用于日常巡检。
-
 评：最开始由于网卡驱动的问题，做了mirror后，segment经常down掉，用-Q参数查询综合信息还是比较有用的。
 
-5.       查看用户会话和提交的查询等信息
+5.  查看用户会话和提交的查询等信息  
 
 select * from pg_stat_activity  该表能查看到当前数据库连接的IP 地址，用户名，提交的查询等。另外也可以在master 主机上查看进程，对每个客户端连接，master 都会创建一个进程。ps -ef |grep -i postgres |grep -i con
 
- 
-
 评：常用的命令，我经常用这个查看数据库死在那个sql上了。
 
-6.       查看数据库、表占用空间
-
+6. 查看数据库、表占用空间
 select pg_size_pretty(pg_relation_size('schema.tablename'));
-
 select pg_size_pretty(pg_database_size('databasename));
-
-    必须在数据库所对应的存储系统里，至少保留30%的自由空间，日常巡检，要检查存储空间的剩余容量。
-
+必须在数据库所对应的存储系统里，至少保留30%的自由空间，日常巡检，要检查存储空间的剩余容量。
 评：可以查看任何数据库对象的占用空间，pg_size_pretty可以显示如mb之类的易读数据，另外，可以与pg_tables，pg_indexes之类的系统表链接，统计出各类关于数据库对象的空间信息。
-
- 
-
-7.       收集统计信息，回收空间
-
+7. 收集统计信息，回收空间
 定期使用Vacuum analyze tablename 回收垃圾和收集统计信息，尤其在大数据量删除，导入以后，非常重要
-
-评：这个说的不全面，vacuum分两种，一种是analize，优化查询计划的，还有一种是清理垃圾数据，postres删除工作，并不是真正删除数据，而是在被删除的数据上，坐一个标记，只有执行vacuum时，才会真正的物理删除，这个非常重用，有些经常更新的表，各种查询、更新效率会越来越慢，这个多是因为没有做vacuum的原因。
-
- 
-
-8.       查看数据分布情况
+评：这个说的不全面，vacuum分两种，一种是analize，优化查询计划的，还有一种是清理垃圾数据，postres删除工作，并不是真正删除数据，而是在被删除的数据上，坐一个标记，只有执行vacuum时，才会真正的物理删除，这个非常重用，有些经常更新的表，各种查询、更新效率会越来越慢，这个多是因为没有做vacuum的原因
+8. 查看数据分布情况
 
 两种方式：
-
-l  Select gp_segment_id,count(*) from  tablename  group by 1 ;
-
-l  在命令运行：gpskew -t public.ate -a postgres
-
+  *  Select gp_segment_id,count(*) from  tablename  group by 1 ;
+  *  在命令运行：gpskew -t public.ate -a postgres
 如数据分布不均匀，将发挥不了并行计算的优势，严重影响性能。
 
- 
-
 评：非常有用，gp要保障数据分布均匀。
-
- 
-
-9.       实例恢复：gprecoverseg
+9. 实例恢复：gprecoverseg
 
 通过gpstate 或gp_configuration 发现有实例down 掉以后，使用该命令进行回复。
-
 10.   查看锁信息：
-
-SELECT locktype, database, c.relname, l.relation, l.transactionid, l.transaction, l.pid, l.mode, l.granted, a.current_query
-
-FROM pg_locks l, pg_class c, pg_stat_activity a
-
-WHERE l.relation=c.oid AND l.pid=a.procpid
-
-ORDER BY c.relname;
-
+      SELECT locktype, database, c.relname, l.relation, l.transactionid, l.transaction, l.pid, l.mode, l.granted, a.current_query
+      FROM pg_locks l, pg_class c, pg_stat_activity a
+      WHERE l.relation=c.oid AND l.pid=a.procpid
+      ORDER BY c.relname;
 主要字段说明：
-
 relname: 表名
-
 locktype、mode 标识了锁的类型
-
-11.   explain：在提交大的查询之前，使用explain分析执行计划、发现潜在优化机会，避免将系统资源熬尽。
-
- 
+11. explain：在提交大的查询之前，使用explain分析执行计划、发现潜在优化机会，避免将系统资源熬尽。
 
 评：少写了个analyze，如果只是explain，统计出来的执行时间，是非常坑爹的，如果希望获得准确的执行时间，必须加上analyze。
-
- 
 
 12.   数据库备份 gp_dump
 
 常用参数：-s: 只导出对象定义（表结构，函数等）
-
-                   -n: 只导出某个schema
-
+         -n: 只导出某个schema
 gp_dump 默认在master 的data 目录上产生这些文件：
-
 gp_catalog_1_<dbid>_<timestamp> ：关于数据库系统配置的备份文件
-
 gp_cdatabase_1_<dbid>_<timestamp>：数据库创建语句的备份文件
-
 gp_dump_1_<dbid>_<timestamp>：数据库对象ddl语句
-
 gp_dump_status_1_<dbid>_<timestamp>：备份操作的日志
-
 在每个segment instance 上的data目录上产生的文件：
-
 gp_dump_0_<dbid>_<timestamp>：用户数据备份文件
-
 gp_dump_status_0_<dbid>_<timestamp>：备份日志
 
-13.   数据库恢复 gp_restore
+13 .  数据库恢复 gp_restore
 
 必选参数：--gp-k=key ：key 为gp_dump 导出来的文件的后缀时间戳
-
-                   -d dbname  ：将备份文件恢复到dbname
-
- 
-
- 
-
+         -d dbname  ：将备份文件恢复到dbname
 14. 登陆与退出Greenplum
 
-#正常登陆
-
-psql gpdb
-
-psql -d gpdb -h gphostm -p 5432 -U gpadmin
-
-#使用utility方式
-
+psql gpdb  
+psql -d gpdb -h gphostm -p 5432 -U gpadmin  
+使用utility方式  
 PGOPTIONS="-c gp_session_role=utility" psql -h -d dbname hostname -p port
-
-#退出
-
+退出
 在psql命令行执行\q
 
 15. 参数查询
