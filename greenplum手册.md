@@ -369,3 +369,55 @@ psql gpdbname –f yoursqlfile.sql
 或者psql登陆后执行
 
 \i yoursqlfile.sql
+
+# 命令
+1. 创建数据库 　　createdb test_db;  
+2. 删除数据库 　　dropdb test_db;  
+3. 创建模式 　　　create schema myschema;  
+4. 删除模式 　　　drop schema myschema;  
+5. 创建用户 　　　create user user_name with password '123456' ;  
+6. 删除用户 　　　drop user user_name;  
+7. 查看系统用户信息 　　select usename from pg_user;  
+8. 查看版本信息 　　　　select version();  
+9. 打开psql交互工具 　　psql name_db;      
+10. 执行sql文件 　　　　mydb=> \i basics.sql \i 命令从指定的文件中读取命令。  
+11. 批量将文本文件中内容导入到wether表 　　　　　　 copy weather from '/home/user/weather.txt';  
+12. 查看搜索模式 　　　 show search_path;  
+13. 设置搜索模式 　　　 set search_path to myschema,public;  
+14. 创建表空间 　　　　 create tablespace spacename_tb location 'file_path';  
+15. 显示默认表空间 　　 show default_tablespace;  
+16. 设置默认表空间 　　 set default_tablespace=表空间名称;  
+17. 指定用户登录 　　　  psql mtps -u  
+18. 显示当前系统时间 　　select now() ;  
+19. 配置plpgsql语言 　　 create language 'plpgsql' handler plpgsql_call_handler;  
+20. 删除规则 　　 drop rule name on relation [ cascade | restrict ];  
+21. 当前日期属于一年中第几周 　　 select extract(week from timestamp '2020-06-14');  
+22. 查询表是否存在 　　 select * from pg_statio_user_tables where relname='test_tb';  
+23. 导出表 　　  　　　　 ./pg_dump -p 端口号 -u 用户 -t 表名称 -f 备份文件位置 数据库 ;  
+24. 整个数据库导出 　　 pg_dumpall -d -p 端口号 -h 服务器ip -u postgres(用户名) > /home/xiaop/all.bak  
+25. 数据库备份恢复 　　 psql -h 192.168.0.48 -p 5433 -u postgres  
+26. 数据库备份 　　　　 pg_dumpall -h 192.168.0.4 -p 5433 -u postgres >/databack/postgresql2020061401.dmp  
+27. 当前日期函数 　　　 select current_date;  
+28. 返回第十条开始的5条记录 　　 select * from tbname limit 5 offset 10;  
+29. 查看数据库大小 　　 select pg_size_pretty(pg_database_size('mtps')) as fulldbsize;  
+30. 查看数据库表大小 　 select pg_size_pretty(pg_total_relation_size('test_db.t_l_collectfile')) as fulltblsize,pg_size_pretty(pg_relation_size('test_db.t_l_collectfile')) as jus      tthetblsize;  
+31. 设置执行超过指定秒数的sql语句输出到日志 　　 log_min_duration_statement = 3  
+32. 超过一定秒数sql自动执行执行计划　　　shared_preload_libraries = 'auto_explain',custom_variable_classes = 'auto_explain',auto_explain.log_min_duration = 4s  
+33. 数据库备份  
+　 　select pg_start_backup('backup baseline');  
+　 　select pg_stop_backup();  
+　 　recovery.conf  
+　 　restore_command='cp /opt/buxlog/%f %p'  
+34. 数据字典查看表结构 　　select column_name, data_type from information_schema.columns where table_name = 'test_tb';  
+35. 查询表结构 　　　　  　 select a.attnum,a.attname as field,t.typname as type,a.attlen as length,a.atttypmod as lengthvar,a.attnotnull as notnull from pg_class c,pg_attribute a,pg_ type t where c.relname=表名称and a.attnum > 0 and a.attrelid = c.oid and a.atttypid = t.oid  
+36. 将查询结果直接输出到文件，在psql中 \o 文件路径  
+　 　select datname,rolname from pg_database a left outer join pg_roles b on a.datdba=b.oid; \o  
+37. 查询数据库所有则 　　 select datname,rolname from pg_database a left outer join pg_roles b on a.datdba=b.oid ;  
+38. 结束正在执行的事务 　　select * from pg_stat_activity;  
+39. 查看被锁定表  
+    select pg_class.relname as table, pg_database.datname as database, pid, mode, granted from pg_locks, pg_class, pg_database where pg_locks.relation = pg_class.oid  and            pg_locks.dat abase = pg_database.oid;  
+40. 查看客户端连接情况 　　　　select client_addr ,client_port,waiting,query_start,current_query from pg_stat_activity;  
+41. 常看数据库.conf配置 　　　  show all;  
+　　修改数据库postgresql.conf参数  
+　　修改postgresql.conf内容 pg_ctl reload  
+　　回滚日志强制恢复 pg_resetxlog -f 数据库文件路径  
