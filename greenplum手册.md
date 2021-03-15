@@ -5,95 +5,93 @@
 
 2.  数据库停止：gpstop：  
 
-常用可选参数：-a：直接停止，不提示终端用户输入确认  
-            -m：只停止master 实例，与gpstart –m 对应使用  
-            -M fast：停止数据库，中断所有数据库连接，回滚正在运行的事务  
-            -u：不停止数据库，只加载pg_hba.conf 和postgresql.conf中运行时参数，当改动参数配置时候使用。  
-            评：-a用在shell里，最多用的还是-M fast。
+    常用可选参数：-a：直接停止，不提示终端用户输入确认  
+                -m：只停止master 实例，与gpstart –m 对应使用  
+                -M fast：停止数据库，中断所有数据库连接，回滚正在运行的事务  
+                -u：不停止数据库，只加载pg_hba.conf 和postgresql.conf中运行时参数，当改动参数配置时候使用。  
+                评：-a用在shell里，最多用的还是-M fast。
 
 3. 查看实例配置和状态
-            select * from gp_configuration order by 1 ;
-主要字段说明：
-           Content：该字段相等的两个实例，是一对Ｐ（primary instance）和Ｍ（mirror  Instance)
-           Isprimary：实例是否作为primary instance 运行
-           Valid：实例是否有效，如处于false 状态，则说明该实例已经down 掉。
-           Port：实例运行的端口
-           Datadir:实例对应的数据目录
+                select * from gp_configuration order by 1 ;
+    主要字段说明：
+               Content：该字段相等的两个实例，是一对Ｐ（primary instance）和Ｍ（mirror  Instance)
+               Isprimary：实例是否作为primary instance 运行
+               Valid：实例是否有效，如处于false 状态，则说明该实例已经down 掉。
+               Port：实例运行的端口
+               Datadir:实例对应的数据目录
 
 4. gpstate ：显示Greenplum数据库运行状态，详细配置等信息  
 
-常用可选参数：-c：primary instance 和 mirror instance 的对应关系  
-             -m：只列出mirror 实例的状态和配置信息  
-             -f：显示standby master 的详细信息  
-             -Q：显示状态综合信息  
+    常用可选参数：-c：primary instance 和 mirror instance 的对应关系  
+                 -m：只列出mirror 实例的状态和配置信息  
+                 -f：显示standby master 的详细信息  
+                 -Q：显示状态综合信息  
 
-该命令默认列出数据库运行状态汇总信息，常用于日常巡检。
-评：最开始由于网卡驱动的问题，做了mirror后，segment经常down掉，用-Q参数查询综合信息还是比较有用的。
+    该命令默认列出数据库运行状态汇总信息，常用于日常巡检。
+    评：最开始由于网卡驱动的问题，做了mirror后，segment经常down掉，用-Q参数查询综合信息还是比较有用的。
 
 5.  查看用户会话和提交的查询等信息  
 
-select * from pg_stat_activity  该表能查看到当前数据库连接的IP 地址，用户名，提交的查询等。另外也可以在master 主机上查看进程，对每个客户端连接，master 都会创建一个进程。ps -ef |grep -i postgres |grep -i con
+    select * from pg_stat_activity  该表能查看到当前数据库连接的IP 地址，用户名，提交的查询等。另外也可以在master 主机上查看进程，对每个客户端连接，master 都会创建一个进程。ps -ef |grep -i postgres |grep -i con
 
-评：常用的命令，我经常用这个查看数据库死在那个sql上了。
+    评：常用的命令，我经常用这个查看数据库死在那个sql上了。
 
 6. 查看数据库、表占用空间
-select pg_size_pretty(pg_relation_size('schema.tablename'));
-select pg_size_pretty(pg_database_size('databasename));
-必须在数据库所对应的存储系统里，至少保留30%的自由空间，日常巡检，要检查存储空间的剩余容量。
-评：可以查看任何数据库对象的占用空间，pg_size_pretty可以显示如mb之类的易读数据，另外，可以与pg_tables，pg_indexes之类的系统表链接，统计出各类关于数据库对象的空间信息。
+    select pg_size_pretty(pg_relation_size('schema.tablename'));
+    select pg_size_pretty(pg_database_size('databasename));
+    必须在数据库所对应的存储系统里，至少保留30%的自由空间，日常巡检，要检查存储空间的剩余容量。
+    评：可以查看任何数据库对象的占用空间，pg_size_pretty可以显示如mb之类的易读数据，另外，可以与pg_tables，pg_indexes之类的系统表链接，统计出各类关于数据库对象的空间信息。
 7. 收集统计信息，回收空间
-定期使用Vacuum analyze tablename 回收垃圾和收集统计信息，尤其在大数据量删除，导入以后，非常重要
-评：这个说的不全面，vacuum分两种，一种是analize，优化查询计划的，还有一种是清理垃圾数据，postres删除工作，并不是真正删除数据，而是在被删除的数据上，坐一个标记，只有执行vacuum时，才会真正的物理删除，这个非常重用，有些经常更新的表，各种查询、更新效率会越来越慢，这个多是因为没有做vacuum的原因
-8. 查看数据分布情况
+    定期使用Vacuum analyze tablename 回收垃圾和收集统计信息，尤其在大数据量删除，导入以后，非常重要
+    评：这个说的不全面，vacuum分两种，一种是analize，优化查询计划的，还有一种是清理垃圾数据，postres删除工作，并不是真正删除数据，而是在被删除的数据上，坐一个标记，只有执行vacuum时，才会真正的物理删除，这个非常重用，有些经常更新的表，各种查询、更新效率会越来越慢，这个多是因为没有做vacuum的原因
+    8. 查看数据分布情况
 
-两种方式：
-  *  Select gp_segment_id,count(*) from  tablename  group by 1 ;
-  *  在命令运行：gpskew -t public.ate -a postgres
-如数据分布不均匀，将发挥不了并行计算的优势，严重影响性能。
+    两种方式：
+      *  Select gp_segment_id,count(*) from  tablename  group by 1 ;
+      *  在命令运行：gpskew -t public.ate -a postgres
+    如数据分布不均匀，将发挥不了并行计算的优势，严重影响性能。
 
-评：非常有用，gp要保障数据分布均匀。
+    评：非常有用，gp要保障数据分布均匀。
 9. 实例恢复：gprecoverseg
 
-通过gpstate 或gp_configuration 发现有实例down 掉以后，使用该命令进行回复。
+    通过gpstate 或gp_configuration 发现有实例down 掉以后，使用该命令进行回复。
 10.   查看锁信息：
       SELECT locktype, database, c.relname, l.relation, l.transactionid, l.transaction, l.pid, l.mode, l.granted, a.current_query
       FROM pg_locks l, pg_class c, pg_stat_activity a
       WHERE l.relation=c.oid AND l.pid=a.procpid
       ORDER BY c.relname;
-主要字段说明：
-relname: 表名
-locktype、mode 标识了锁的类型
-11. explain：在提交大的查询之前，使用explain分析执行计划、发现潜在优化机会，避免将系统资源熬尽。
-
-评：少写了个analyze，如果只是explain，统计出来的执行时间，是非常坑爹的，如果希望获得准确的执行时间，必须加上analyze。
+    主要字段说明：
+    relname: 表名
+    locktype、mode 标识了锁的类型
+    11. explain：在提交大的查询之前，使用explain分析执行计划、发现潜在优化机会，避免将系统资源熬尽。  
+    评：少写了个analyze，如果只是explain，统计出来的执行时间，是非常坑爹的，如果希望获得准确的执行时间，必须加上analyze。
 
 12.   数据库备份 gp_dump
 
-常用参数：-s: 只导出对象定义（表结构，函数等）
-         -n: 只导出某个schema
-gp_dump 默认在master 的data 目录上产生这些文件：
-gp_catalog_1_<dbid>_<timestamp> ：关于数据库系统配置的备份文件
-gp_cdatabase_1_<dbid>_<timestamp>：数据库创建语句的备份文件
-gp_dump_1_<dbid>_<timestamp>：数据库对象ddl语句
-gp_dump_status_1_<dbid>_<timestamp>：备份操作的日志
-在每个segment instance 上的data目录上产生的文件：
-gp_dump_0_<dbid>_<timestamp>：用户数据备份文件
-gp_dump_status_0_<dbid>_<timestamp>：备份日志
+      常用参数：-s: 只导出对象定义（表结构，函数等）
+               -n: 只导出某个schema
+      gp_dump 默认在master 的data 目录上产生这些文件：
+      gp_catalog_1_<dbid>_<timestamp> ：关于数据库系统配置的备份文件
+      gp_cdatabase_1_<dbid>_<timestamp>：数据库创建语句的备份文件
+      gp_dump_1_<dbid>_<timestamp>：数据库对象ddl语句
+      gp_dump_status_1_<dbid>_<timestamp>：备份操作的日志
+      在每个segment instance 上的data目录上产生的文件：
+      gp_dump_0_<dbid>_<timestamp>：用户数据备份文件
+      gp_dump_status_0_<dbid>_<timestamp>：备份日志
 
-13 .  数据库恢复 gp_restore
+13 .  数据库恢复 gp_restore  
+        必选参数：--gp-k=key ：key 为gp_dump 导出来的文件的后缀时间戳
+                 -d dbname  ：将备份文件恢复到dbname
+14. 登陆与退出Greenplum  
 
-必选参数：--gp-k=key ：key 为gp_dump 导出来的文件的后缀时间戳
-         -d dbname  ：将备份文件恢复到dbname
-14. 登陆与退出Greenplum
+    psql gpdb  
+    psql -d gpdb -h gphostm -p 5432 -U gpadmin  
+    使用utility方式  
+    PGOPTIONS="-c gp_session_role=utility" psql -h -d dbname hostname -p port
+    退出
+    在psql命令行执行\q
 
-psql gpdb  
-psql -d gpdb -h gphostm -p 5432 -U gpadmin  
-使用utility方式  
-PGOPTIONS="-c gp_session_role=utility" psql -h -d dbname hostname -p port
-退出
-在psql命令行执行\q
-
-15. 参数查询
+15. 参数查询  
 
 psql -c 'SHOW ALL;' -d gpdb
 
