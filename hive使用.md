@@ -1,9 +1,10 @@
-# hive元数据  
+# Hive是基于Hadoop的数据仓库解决方案。由于Hadoop本身在数据存储和计算方面有很好的可扩展性和高容错性，因此使用Hive构建的数据仓库也秉承了这些特性。
+## hive元数据  
 [hive元数据学习](http://lxw1234.com/archives/2015/07/378.htm)
 ![image](https://github.com/Monkey5030/greenplum-record/blob/main/image/hive%E5%85%83%E6%95%B0%E6%8D%AE.png)  
 
 
-# Hive SQL的优化  
+## Hive SQL的优化  
 1. 使用分区剪裁、列剪裁
 在SELECT中，只拿需要的列，如果有，尽量使用分区过滤，少用SELECT *。  
 在分区剪裁中，当使用外关联时，如果将副表的过滤条件写在Where后面，那么就会先全表关联，之后再过滤，比如：  
