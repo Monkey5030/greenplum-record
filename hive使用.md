@@ -1,6 +1,12 @@
 # Hive是基于Hadoop的数据仓库解决方案。由于Hadoop本身在数据存储和计算方面有很好的可扩展性和高容错性，因此使用Hive构建的数据仓库也秉承了这些特性。
 ## hive元数据  
 [hive元数据学习](http://lxw1234.com/archives/2015/07/378.htm)  
+* 查询表有多少数据  
+```
+select c.NAME, a.TBL_NAME, b.PARAM_KEY, b.PARAM_VALUE from metastore.TBLS as a left  join metastore.TABLE_PARAMS as b on a.TBL_ID = b.TBL_ID 
+left  join metastore.DBS c on  a.DB_ID = c.DB_ID 
+where   b.PARAM_KEY = 'numRows';
+```
 ![image](https://github.com/Monkey5030/greenplum-record/blob/main/image/hive%E5%85%83%E6%95%B0%E6%8D%AE.png)  
 
 
