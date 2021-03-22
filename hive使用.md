@@ -1,5 +1,6 @@
 # Hive是基于Hadoop的数据仓库解决方案。由于Hadoop本身在数据存储和计算方面有很好的可扩展性和高容错性，因此使用Hive构建的数据仓库也秉承了这些特性。
 ## Impala与Hive  
+[hive与数据库对比](https://github.com/Monkey5030/greenplum-record/blob/main/image/hive%E4%B8%8E%E4%BC%A0%E7%BB%9F%E7%9A%84%E6%AF%94%E8%BE%83.jpg)
 * 不同点：  
 Hive适合长时间批处理查询分析；而Impala适合进行交互式SQL查询。  
 Hive依赖于MR计算框架，执行计划组合成管道型MR任务模型进行执行；而Impala则把执行计划表现为一棵完整的执行计划树，可更自然地分发执行计划到各个Impalad执行查询。  
