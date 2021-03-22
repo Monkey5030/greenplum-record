@@ -1,4 +1,5 @@
-# Hive是基于Hadoop的数据仓库解决方案。由于Hadoop本身在数据存储和计算方面有很好的可扩展性和高容错性，因此使用Hive构建的数据仓库也秉承了这些特性。
+# Hive是基于Hadoop的数据仓库解决方案。由于Hadoop本身在数据存储和计算方面有很好的可扩展性和高容错性，因此使用Hive构建的数据仓库也秉承了这些特性。  
+[数仓介绍](https://mp.weixin.qq.com/s/JoMt8xfNRZrAzVNdo0T2aw)
 ## Impala与Hive  
 ![image](https://github.com/Monkey5030/greenplum-record/blob/main/image/hive%E4%B8%8E%E4%BC%A0%E7%BB%9F%E7%9A%84%E6%AF%94%E8%BE%83.jpg)
 * 不同点：  
